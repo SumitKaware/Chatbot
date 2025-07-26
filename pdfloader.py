@@ -1,103 +1,17 @@
+import io
 import os
 import pdfplumber
 import pandas as pd
 import fitz # PyMuPDF for image extraction
 from PIL import Image # Pillow for image manipulation
-import io
-import base64
 import json
-import operator
-
-# LangChain imports for embeddings and multimodal LLM
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from langchain_core.documents import Document as LangchainDocument # Alias to avoid conflict if needed
 from typing import List, Dict, Any
 from langchain_community.vectorstores import Chroma # Import ChromaDB
-from langchain.text_splitter import RecursiveCharacterTextSplitter # Import the text splitter
-
-# --- 1. Configuration and Setup ---
-
-# IMPORTANT: Replace "YOUR_API_KEY" with your actual Google API Key or set it as an environment variable.
-# You can get an API key from Google AI Studio: https://aistudio.google.com/app/apikey
-# It's recommended to set it as an environment variable: export GOOGLE_API_KEY="your_api_key_here"
-# api_key = os.getenv("GOOGLE_API_KEY", "")
-# if not api_key:
-#     print("Warning: GOOGLE_API_KEY environment variable not set. Attempting to use global __api_key__.")
-#     api_key = globals().get('__api_key__', '')
-#     if not api_key:
-#         raise ValueError("Google API Key is not set. Please set GOOGLE_API_KEY environment variable or provide it.")
-from google.colab import userdata
-api_key = userdata.get('GOOGLE_API_KEY_1')
-# Initialize embedding model (for text and table descriptions)
-embeddings_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=api_key)
-# Initialize multimodal LLM (for image descriptions)
-vision_llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=api_key)
-
-# Initialize the text splitter
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-
-
-def get_image_description_embedding(image_bytes: bytes) -> Dict[str, Any]:
-    """
-    Generates a description for an image using a multimodal LLM and then
-    creates an embedding for that description.
-    """
-    try:
-        # Convert image bytes to base64 for LLM input
-        base64_image = base64.b64encode(image_bytes).decode('utf-8')
-
-        # Prompt the multimodal LLM to describe the image
-        print("    - Generating description for image...")
-        response = vision_llm.invoke([
-            HumanMessage(
-                content=[
-                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}},
-                    {"type": "text", "text": "Describe this image concisely and informatively. Focus on key objects, text, or concepts. If it's a diagram or chart, mention its type. Keep it under 100 words."}
-                ]
-            )
-        ])
-        description = response.content
-        print(f"    - Image description generated (first 50 chars): {description[:50]}...")
-
-        # Embed the generated description
-        embedding = embeddings_model.embed_query(description)
-        print("    - Image description embedded.")
-        return {"description": description, "embedding": embedding}
-    except Exception as e:
-        print(f"    - Error generating image description/embedding: {e}")
-        return {"description": "Error generating description.", "embedding": []}
-
-def get_text_embedding(text_content: str) -> List[float]:
-    """
-    Generates an embedding for the given text content.
-    """
-    try:
-        embedding = embeddings_model.embed_query(text_content)
-        return embedding
-    except Exception as e:
-        print(f"    - Error generating text embedding: {e}")
-        return []
-
-def get_table_embedding(df: pd.DataFrame) -> Dict[str, Any]:
-    """
-    Converts a DataFrame to a Markdown table string, generates a description,
-    and then creates an embedding for that description.
-    """
-    try:
-        # Convert DataFrame to Markdown string for LLM readability
-        table_markdown = df.to_markdown(index=False)
-        # Create a concise description of the table's content/structure
-        description = f"Table with columns: {', '.join(df.columns.tolist())}. First few rows:\n{table_markdown.splitlines()[1:min(5, len(table_markdown.splitlines()))+1]}"
-        description = f"A table with {len(df.columns)} columns and {len(df)} rows. Columns are: {', '.join(df.columns.tolist())}. Sample data:\n{df.head(2).to_string(index=False)}"
-
-        embedding = embeddings_model.embed_query(description)
-        print("    - Table description and embedding generated.")
-        return {"description": description, "embedding": embedding}
-    except Exception as e:
-        print(f"    - Error generating table description/embedding: {e}")
-        return {"description": "Error generating table description.", "embedding": []}
-
+from model import text_splitter # Import LLM and embeddings from model.py
+from embedding_genration import get_text_embedding, get_table_embedding, get_image_description_embedding
+from storing_embeddings import load_chroma_db_and_retriever, store_embeddings_in_chromadb
 
 def extract_and_embed_pdf(pdf_path: str, output_dir: str) -> List[Dict[str, Any]]:
     """
@@ -265,20 +179,24 @@ def extract_and_embed_pdf(pdf_path: str, output_dir: str) -> List[Dict[str, Any]
         print(f"Error processing {pdf_name}: {e}")
         return []
 
-def process_multiple_pdfs_with_embeddings(input_dir: str, output_dir: str):
+def read_and_embed_multiple_pdfs(input_dir: str, output_dir: str) -> Dict[str, List[Dict[str, Any]]]:
     """
-    Processes all PDF files in a given input directory, extracts content,
-    generates embeddings, and saves structured results.
-    Also stores the embeddings in a persistent ChromaDB for each PDF.
+    Reads multiple PDF files, extracts their content (text, tables, images),
+    generates embeddings, and saves structured results to JSON files.
 
     Args:
         input_dir (str): The directory containing the PDF files.
-        output_dir (str): The directory where all extracted content and
+        output_dir (str): The base directory where all extracted content and
                           embedding data will be saved.
+
+    Returns:
+        Dict[str, List[Dict[str, Any]]]: A dictionary where keys are PDF filenames
+                                         and values are lists of extracted elements
+                                         with their embeddings.
     """
     if not os.path.exists(input_dir):
         print(f"Input directory '{input_dir}' does not exist.")
-        return
+        return {}
 
     os.makedirs(output_dir, exist_ok=True)
     print(f"Starting PDF extraction and embedding from '{input_dir}' to '{output_dir}'")
@@ -287,7 +205,7 @@ def process_multiple_pdfs_with_embeddings(input_dir: str, output_dir: str):
 
     if not pdf_files:
         print(f"No PDF files found in '{input_dir}'.")
-        return
+        return {}
 
     all_pdfs_processed_data = {}
 
@@ -309,55 +227,16 @@ def process_multiple_pdfs_with_embeddings(input_dir: str, output_dir: str):
                     serializable_data.append(serializable_item)
                 json.dump(serializable_data, f, indent=2)
             print(f"  - Saved structured data and embeddings to: {output_json_path}")
-
-            # --- Store embeddings in ChromaDB ---
-            chroma_db_path = os.path.join(output_dir, os.path.splitext(pdf_file)[0], "chroma_db")
-            os.makedirs(chroma_db_path, exist_ok=True)
-            print(f"  - Initializing ChromaDB for {pdf_file} at '{chroma_db_path}'...")
-
-            # Create Langchain Documents from the extracted elements for ChromaDB
-            lc_documents_for_chroma = []
-            for element in extracted_data:
-                # Use the 'description' as page_content for embedding in Chroma
-                # Add metadata to preserve context and original element info
-                metadata = {
-                    "type": element["type"],
-                    "page_num": element["page_num"],
-                    "bbox": str(element["bbox"]), # Convert tuple to string for JSON compatibility in metadata
-                    "original_content_summary": element["original_content_summary"],
-                    "source_pdf": pdf_file
-                }
-                # Create LangchainDocument with pre-computed embedding
-                lc_doc = LangchainDocument(
-                    page_content=element["description"],
-                    metadata=metadata
-                )
-                lc_documents_for_chroma.append(lc_doc)
-
-            # Add documents to ChromaDB. We pass the pre-computed embeddings.
-            # If you don't pass embeddings, Chroma will compute them using the provided embeddings_model.
-            # We explicitly pass them here to ensure consistency and control.
-            vectorstore = Chroma.from_documents(
-                documents=lc_documents_for_chroma,
-                embedding=embeddings_model, # Pass the embedding function
-                persist_directory=chroma_db_path
-            )
-            # Persist the database to disk
-            vectorstore.persist()
-            print(f"  - Stored {len(lc_documents_for_chroma)} elements in ChromaDB for {pdf_file}.")
-            # You can optionally load it back later:
-            # loaded_vectorstore = Chroma(persist_directory=chroma_db_path, embedding_function=embeddings_model)
-            # results = loaded_vectorstore.similarity_search("your query")
-
         print("=" * 70) # Major separator
-
-    print("\nAll PDF files processed, embeddings generated, and stored in ChromaDB.")
-    print(f"Check the '{output_dir}' directory for results.")
-    print("Each PDF will have its own subfolder containing extracted content (text, tables, images),")
-    print("a JSON file with structured data and embeddings, and a 'chroma_db' folder.")
+    print("\nAll PDF files processed and embeddings generated.")
+    return all_pdfs_processed_data
 
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
+    
+
+
+def vector_db():
     # --- Configuration ---
     # Create a 'pdfs_to_embed' folder in the same directory as this script
     # and place your PDF files inside it.
@@ -366,17 +245,119 @@ if __name__ == "__main__":
     input_pdf_directory = os.path.join(current_script_dir, "pdfs_to_embed")
     output_embedding_directory = os.path.join(current_script_dir, "embedded_content")
 
+    # --- Create dummy PDF files for testing (optional) ---
+    # This part helps you test the script without manually creating PDFs.
+    # You would typically comment this out or remove it in a real scenario.
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, Image as ReportLabImage
+        from reportlab.lib import colors
+        from reportlab.lib.units import inch
+
+        print("Creating dummy PDF files for testing...")
+        os.makedirs(input_pdf_directory, exist_ok=True)
+
+        # PDF 1: Text, Table, Text
+        doc1 = SimpleDocTemplate(os.path.join(input_pdf_directory, "doc_with_text_table.pdf"), pagesize=letter)
+        styles = getSampleStyleSheet()
+        story = []
+        story.append(Paragraph("Introduction text for the document.", styles['Normal']))
+        story.append(Spacer(1, 0.2 * inch))
+        story.append(Paragraph("Below is a key performance indicator table:", styles['Normal']))
+        data = [['Metric', 'Q1', 'Q2', 'Q3'],
+                ['Revenue', '$100K', '$120K', '$130K'],
+                ['Profit', '$20K', '$25K', '$28K']]
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4CAF50')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#E8F5E9')),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#81C784'))
+        ]))
+        story.append(table)
+        story.append(Spacer(1, 0.2 * inch))
+        story.append(Paragraph("This concludes the first section. More details follow.", styles['Normal']))
+        doc1.build(story)
+        print("  - Created doc_with_text_table.pdf")
+
+        # PDF 2: Text, Image, Text
+        # For a real image, you'd need a small image file (e.g., 'sample_image.png')
+        # Here, we'll create a simple placeholder image in memory
+        img_width, img_height = 200, 150
+        img_buffer = io.BytesIO()
+        img = Image.new('RGB', (img_width, img_height), color = 'red')
+        img.save(img_buffer, format="PNG")
+        img_buffer.seek(0) # Rewind buffer for reading
+
+        doc2 = SimpleDocTemplate(os.path.join(input_pdf_directory, "doc_with_image.pdf"), pagesize=letter)
+        story2 = []
+        story2.append(Paragraph("Here's some information about our product.", styles['Normal']))
+        story2.append(Spacer(1, 0.2 * inch))
+        # Embed the image from buffer
+        reportlab_image = ReportLabImage(img_buffer, img_width, img_height)
+        story2.append(reportlab_image)
+        story2.append(Spacer(1, 0.2 * inch))
+        story2.append(Paragraph("The image above illustrates the product's design.", styles['Normal']))
+        doc2.build(story2)
+        print("  - Created doc_with_image.pdf (with embedded PNG)")
+
+        # PDF 3: Just Text (multi-page)
+        doc3 = SimpleDocTemplate(os.path.join(input_pdf_directory, "long_text_doc.pdf"), pagesize=letter)
+        story3 = []
+        for i in range(5):
+            story3.append(Paragraph(f"This is paragraph {i+1} of a longer text document. It aims to demonstrate how text across multiple pages is handled and chunked. LangChain's text splitters are essential for breaking down large documents into manageable pieces for LLMs. This helps in overcoming token limits and improving the relevance of retrieved information in RAG applications.", styles['Normal']))
+            story3.append(Spacer(1, 0.1 * inch))
+            if i == 2: # Add a page break after 3 paragraphs
+                story3.append(Paragraph("--- Page Break ---", styles['h2']))
+                story3.append(Spacer(1, 0.2 * inch))
+                story3.append(Paragraph("This is the start of a new page.", styles['Normal']))
+                story3.append(Spacer(1, 0.1 * inch))
+        doc3.build(story3)
+        print("  - Created long_text_doc.pdf")
+
+    except ImportError:
+        print("\nNote: reportlab or Pillow library not found. Dummy PDF files will not be created.")
+        print("Please manually place your PDF files in the 'pdfs_to_embed' folder.")
+        print("Install with: pip install reportlab Pillow\n")
+    # --- End of dummy PDF creation ---
+
     # --- Run the extraction and embedding process ---
-    process_multiple_pdfs_with_embeddings(input_pdf_directory, output_embedding_directory)
+    # Step 1: Read PDFs, extract content, generate embeddings, and save JSON
+    processed_data = read_and_embed_multiple_pdfs(input_pdf_directory, output_embedding_directory)
 
-    print(f"\nExtraction and Embedding complete! Check the '{output_embedding_directory}' directory for results.")
-    print("Each PDF will have its own subfolder containing extracted content (text, tables, images) and a JSON file with structured data and embeddings.")
+    # Step 2: Store the generated embeddings into ChromaDB
+    store_embeddings_in_chromadb(processed_data, output_embedding_directory)
 
+    # --- Demonstrate loading ChromaDB and using retriever ---
+    print("\n--- Demonstrating ChromaDB Loading and Retrieval ---")
+    # Assuming 'doc_with_text_table.pdf' was processed and its ChromaDB created
+    sample_pdf_name = "doc_with_text_table" # Adjust if you want to test another dummy PDF
+    sample_chroma_path = os.path.join(output_embedding_directory, sample_pdf_name, "chroma_db")
 
+    retriever = load_chroma_db_and_retriever(sample_chroma_path)
 
+    if retriever:
+        query = "What is the revenue for Q2?"
+        print(f"\nQuerying ChromaDB: '{query}'")
+        retrieved_docs = retriever.invoke(query)
 
+        print("\n--- Retrieved Documents ---")
+        for i, doc in enumerate(retrieved_docs):
+            print(f"Document {i+1} (Type: {doc.metadata.get('type')}, Page: {doc.metadata.get('page_num')}):")
+            print(f"  Content: {doc.page_content[:150]}...") # Print first 150 chars of content
+            print(f"  Metadata: {doc.metadata}\n")
+    else:
+        print("Could not load ChromaDB for demonstration.")
 
-
+    print(f"\nOverall process complete! Check the '{output_embedding_directory}' directory for results.")
+    print("Each PDF will have its own subfolder containing extracted content (text, tables, images),")
+    print("a JSON file with structured data and embeddings, and a 'chroma_db' folder.")
+    return retriever
 
 # Sample documents for our knowledge base
 # In a real application, these would come from files, databases, etc.
