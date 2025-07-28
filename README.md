@@ -12,11 +12,11 @@
 
 3. Embedding/Parsing Pipeline: The content of the PDFs is fed into an Embedding/Parsing Pipeline. This pipeline is responsible for:
 
-    Parsing the PDF content (extracting text, tables, images).
+        Parsing the PDF content (extracting text, tables, images).
 
-    Chunking the extracted content into smaller, manageable pieces.
+        Chunking the extracted content into smaller, manageable pieces.
 
-    Generating numerical representations (embeddings) for each chunk using an embedding model.
+        Generating numerical representations (embeddings) for each chunk using an embedding model.
 
 4. Vector DB: The generated embeddings, along with associated metadata and original content, are stored in a Vector DB (Vector Database). This database allows for efficient similarity searches based on the embeddings.
 
