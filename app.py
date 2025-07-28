@@ -7,15 +7,42 @@ from langgraph.graph import StateGraph, END
 from typing import TypedDict, Annotated, List, Union
 import operator
 from model import llm, embeddings  # Importing the LLM and embeddings from model.py
-from pdfloader import raw_documents, vector_db
+from pdfloader import vector_db
 from storing_embeddings import load_chroma_db_and_retriever  # Importing raw documents from pdfloader.py
 
+# Create a vector database
+#vector_db()  # Initialize the vector store with a sample query
 
-vector_db().invoke("What is the revenue for Q2?")  # Initialize the vector store with a sample query
 
-# Create a retriever to fetch relevant documents
-# retriever = vectorstore.as_retriever()
-vectorstore.invoke("What is the revenue for Q2?")
+# --- Demonstrate loading ChromaDB and using retriever ---
+print("\n--- Demonstrating ChromaDB Loading and Retrieval ---")
+current_script_dir = os.getcwd()
+output_embedding_directory = os.path.join(current_script_dir, "embedded_content")
+sample_chroma_path = os.path.join(output_embedding_directory, "chroma_db")
+
+retriever = load_chroma_db_and_retriever(sample_chroma_path)
+# query = "What is the profit for Q4?"
+# print(f"\nQuerying ChromaDB: '{query}'")
+# try:
+#     retrieved_docs = retriever.invoke(query)
+# except Exception as e:
+#     print(f"Error querying ChromaDB: {e}")
+#     retrieved_docs = []
+# if retriever:
+#     query = "What is the amount allocated for education?"
+#     print(f"\nQuerying ChromaDB: '{query}'")
+    
+#     retrieved_docs = retriever.invoke(query)
+
+#     print("\n--- Retrieved Documents ---")
+#     for i, doc in enumerate(retrieved_docs):
+#         print(f"Document {i+1} (Type: {doc.metadata.get('type')}, Page: {doc.metadata.get('page_num')}):")
+#         print(f"  Content: {doc.page_content[:150]}...") # Print first 150 chars of content
+#         print(f"  Metadata: {doc.metadata}\n")
+# else:
+#     print("Could not load ChromaDB for demonstration.")
+
+
 
 # --- 3. LangGraph Agent Definition ---
 
@@ -43,8 +70,13 @@ def retrieve(state: AgentState):
     """
     print("---RETRIEVE NODE---")
     question = state["question"]
-    documents = retriever.invoke(question)
-    return {"documents": documents, "question": question, "chat_history": state["chat_history"]}
+    if retriever:
+        documents = retriever.invoke(question)
+        print(f"Retrieved {documents} documents for the question: '{question}'")
+        return {"documents": documents, "question": question, "chat_history": state["chat_history"]}
+    else:
+        return "Could not load ChromaDB for demonstration."
+    
 
 def generate(state: AgentState):
     """

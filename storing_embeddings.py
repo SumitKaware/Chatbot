@@ -21,7 +21,8 @@ def store_embeddings_in_chromadb(processed_data_by_pdf: Dict[str, List[Dict[str,
         return
 
     for pdf_file, extracted_data in processed_data_by_pdf.items():
-        chroma_db_path = os.path.join(output_dir, os.path.splitext(pdf_file)[0], "chroma_db")
+        #chroma_db_path = os.path.join(output_dir, os.path.splitext(pdf_file)[0], "chroma_db")
+        chroma_db_path = os.path.join(output_dir, "chroma_db")
         os.makedirs(chroma_db_path, exist_ok=True)
         print(f"  - Initializing ChromaDB for {pdf_file} at '{chroma_db_path}'...")
 

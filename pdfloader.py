@@ -245,86 +245,86 @@ def vector_db():
     input_pdf_directory = os.path.join(current_script_dir, "pdfs_to_embed")
     output_embedding_directory = os.path.join(current_script_dir, "embedded_content")
 
-    # --- Create dummy PDF files for testing (optional) ---
-    # This part helps you test the script without manually creating PDFs.
-    # You would typically comment this out or remove it in a real scenario.
-    try:
-        from reportlab.lib.pagesizes import letter
-        from reportlab.pdfgen import canvas
-        from reportlab.lib.styles import getSampleStyleSheet
-        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, Image as ReportLabImage
-        from reportlab.lib import colors
-        from reportlab.lib.units import inch
+    # # --- Create dummy PDF files for testing (optional) ---
+    # # This part helps you test the script without manually creating PDFs.
+    # # You would typically comment this out or remove it in a real scenario.
+    # try:
+    #     from reportlab.lib.pagesizes import letter
+    #     from reportlab.pdfgen import canvas
+    #     from reportlab.lib.styles import getSampleStyleSheet
+    #     from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, Image as ReportLabImage
+    #     from reportlab.lib import colors
+    #     from reportlab.lib.units import inch
 
-        print("Creating dummy PDF files for testing...")
-        os.makedirs(input_pdf_directory, exist_ok=True)
+    #     print("Creating dummy PDF files for testing...")
+    #     os.makedirs(input_pdf_directory, exist_ok=True)
 
-        # PDF 1: Text, Table, Text
-        doc1 = SimpleDocTemplate(os.path.join(input_pdf_directory, "doc_with_text_table.pdf"), pagesize=letter)
-        styles = getSampleStyleSheet()
-        story = []
-        story.append(Paragraph("Introduction text for the document.", styles['Normal']))
-        story.append(Spacer(1, 0.2 * inch))
-        story.append(Paragraph("Below is a key performance indicator table:", styles['Normal']))
-        data = [['Metric', 'Q1', 'Q2', 'Q3'],
-                ['Revenue', '$100K', '$120K', '$130K'],
-                ['Profit', '$20K', '$25K', '$28K']]
-        table = Table(data)
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4CAF50')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#E8F5E9')),
-            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#81C784'))
-        ]))
-        story.append(table)
-        story.append(Spacer(1, 0.2 * inch))
-        story.append(Paragraph("This concludes the first section. More details follow.", styles['Normal']))
-        doc1.build(story)
-        print("  - Created doc_with_text_table.pdf")
+    #     # PDF 1: Text, Table, Text
+    #     doc1 = SimpleDocTemplate(os.path.join(input_pdf_directory, "doc_with_text_table.pdf"), pagesize=letter)
+    #     styles = getSampleStyleSheet()
+    #     story = []
+    #     story.append(Paragraph("Introduction text for the document.", styles['Normal']))
+    #     story.append(Spacer(1, 0.2 * inch))
+    #     story.append(Paragraph("Below is a key performance indicator table:", styles['Normal']))
+    #     data = [['Metric', 'Q1', 'Q2', 'Q3'],
+    #             ['Revenue', '$100K', '$120K', '$130K'],
+    #             ['Profit', '$20K', '$25K', '$28K']]
+    #     table = Table(data)
+    #     table.setStyle(TableStyle([
+    #         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4CAF50')),
+    #         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+    #         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+    #         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+    #         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+    #         ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#E8F5E9')),
+    #         ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#81C784'))
+    #     ]))
+    #     story.append(table)
+    #     story.append(Spacer(1, 0.2 * inch))
+    #     story.append(Paragraph("This concludes the first section. More details follow.", styles['Normal']))
+    #     doc1.build(story)
+    #     print("  - Created doc_with_text_table.pdf")
 
-        # PDF 2: Text, Image, Text
-        # For a real image, you'd need a small image file (e.g., 'sample_image.png')
-        # Here, we'll create a simple placeholder image in memory
-        img_width, img_height = 200, 150
-        img_buffer = io.BytesIO()
-        img = Image.new('RGB', (img_width, img_height), color = 'red')
-        img.save(img_buffer, format="PNG")
-        img_buffer.seek(0) # Rewind buffer for reading
+    #     # PDF 2: Text, Image, Text
+    #     # For a real image, you'd need a small image file (e.g., 'sample_image.png')
+    #     # Here, we'll create a simple placeholder image in memory
+    #     img_width, img_height = 200, 150
+    #     img_buffer = io.BytesIO()
+    #     img = Image.new('RGB', (img_width, img_height), color = 'red')
+    #     img.save(img_buffer, format="PNG")
+    #     img_buffer.seek(0) # Rewind buffer for reading
 
-        doc2 = SimpleDocTemplate(os.path.join(input_pdf_directory, "doc_with_image.pdf"), pagesize=letter)
-        story2 = []
-        story2.append(Paragraph("Here's some information about our product.", styles['Normal']))
-        story2.append(Spacer(1, 0.2 * inch))
-        # Embed the image from buffer
-        reportlab_image = ReportLabImage(img_buffer, img_width, img_height)
-        story2.append(reportlab_image)
-        story2.append(Spacer(1, 0.2 * inch))
-        story2.append(Paragraph("The image above illustrates the product's design.", styles['Normal']))
-        doc2.build(story2)
-        print("  - Created doc_with_image.pdf (with embedded PNG)")
+    #     doc2 = SimpleDocTemplate(os.path.join(input_pdf_directory, "doc_with_image.pdf"), pagesize=letter)
+    #     story2 = []
+    #     story2.append(Paragraph("Here's some information about our product.", styles['Normal']))
+    #     story2.append(Spacer(1, 0.2 * inch))
+    #     # Embed the image from buffer
+    #     reportlab_image = ReportLabImage(img_buffer, img_width, img_height)
+    #     story2.append(reportlab_image)
+    #     story2.append(Spacer(1, 0.2 * inch))
+    #     story2.append(Paragraph("The image above illustrates the product's design.", styles['Normal']))
+    #     doc2.build(story2)
+    #     print("  - Created doc_with_image.pdf (with embedded PNG)")
 
-        # PDF 3: Just Text (multi-page)
-        doc3 = SimpleDocTemplate(os.path.join(input_pdf_directory, "long_text_doc.pdf"), pagesize=letter)
-        story3 = []
-        for i in range(5):
-            story3.append(Paragraph(f"This is paragraph {i+1} of a longer text document. It aims to demonstrate how text across multiple pages is handled and chunked. LangChain's text splitters are essential for breaking down large documents into manageable pieces for LLMs. This helps in overcoming token limits and improving the relevance of retrieved information in RAG applications.", styles['Normal']))
-            story3.append(Spacer(1, 0.1 * inch))
-            if i == 2: # Add a page break after 3 paragraphs
-                story3.append(Paragraph("--- Page Break ---", styles['h2']))
-                story3.append(Spacer(1, 0.2 * inch))
-                story3.append(Paragraph("This is the start of a new page.", styles['Normal']))
-                story3.append(Spacer(1, 0.1 * inch))
-        doc3.build(story3)
-        print("  - Created long_text_doc.pdf")
+    #     # PDF 3: Just Text (multi-page)
+    #     doc3 = SimpleDocTemplate(os.path.join(input_pdf_directory, "long_text_doc.pdf"), pagesize=letter)
+    #     story3 = []
+    #     for i in range(5):
+    #         story3.append(Paragraph(f"This is paragraph {i+1} of a longer text document. It aims to demonstrate how text across multiple pages is handled and chunked. LangChain's text splitters are essential for breaking down large documents into manageable pieces for LLMs. This helps in overcoming token limits and improving the relevance of retrieved information in RAG applications.", styles['Normal']))
+    #         story3.append(Spacer(1, 0.1 * inch))
+    #         if i == 2: # Add a page break after 3 paragraphs
+    #             story3.append(Paragraph("--- Page Break ---", styles['h2']))
+    #             story3.append(Spacer(1, 0.2 * inch))
+    #             story3.append(Paragraph("This is the start of a new page.", styles['Normal']))
+    #             story3.append(Spacer(1, 0.1 * inch))
+    #     doc3.build(story3)
+    #     print("  - Created long_text_doc.pdf")
 
-    except ImportError:
-        print("\nNote: reportlab or Pillow library not found. Dummy PDF files will not be created.")
-        print("Please manually place your PDF files in the 'pdfs_to_embed' folder.")
-        print("Install with: pip install reportlab Pillow\n")
-    # --- End of dummy PDF creation ---
+    # except ImportError:
+    #     print("\nNote: reportlab or Pillow library not found. Dummy PDF files will not be created.")
+    #     print("Please manually place your PDF files in the 'pdfs_to_embed' folder.")
+    #     print("Install with: pip install reportlab Pillow\n")
+    # # --- End of dummy PDF creation ---
 
     # --- Run the extraction and embedding process ---
     # Step 1: Read PDFs, extract content, generate embeddings, and save JSON
@@ -333,41 +333,29 @@ def vector_db():
     # Step 2: Store the generated embeddings into ChromaDB
     store_embeddings_in_chromadb(processed_data, output_embedding_directory)
 
-    # --- Demonstrate loading ChromaDB and using retriever ---
-    print("\n--- Demonstrating ChromaDB Loading and Retrieval ---")
-    # Assuming 'doc_with_text_table.pdf' was processed and its ChromaDB created
-    sample_pdf_name = "doc_with_text_table" # Adjust if you want to test another dummy PDF
-    sample_chroma_path = os.path.join(output_embedding_directory, sample_pdf_name, "chroma_db")
+    # # --- Demonstrate loading ChromaDB and using retriever ---
+    # print("\n--- Demonstrating ChromaDB Loading and Retrieval ---")
+    # # Assuming 'doc_with_text_table.pdf' was processed and its ChromaDB created
+    # sample_pdf_name = "doc_with_text_table" # Adjust if you want to test another dummy PDF
+    # #sample_chroma_path = os.path.join(output_embedding_directory, sample_pdf_name, "chroma_db")
+    # sample_chroma_path = os.path.join(output_embedding_directory, "chroma_db")
 
-    retriever = load_chroma_db_and_retriever(sample_chroma_path)
+    # retriever = load_chroma_db_and_retriever(sample_chroma_path)
 
-    if retriever:
-        query = "What is the revenue for Q2?"
-        print(f"\nQuerying ChromaDB: '{query}'")
-        retrieved_docs = retriever.invoke(query)
+    # if retriever:
+    #     query = "What is the revenue for Q2?"
+    #     print(f"\nQuerying ChromaDB: '{query}'")
+    #     retrieved_docs = retriever.invoke(query)
 
-        print("\n--- Retrieved Documents ---")
-        for i, doc in enumerate(retrieved_docs):
-            print(f"Document {i+1} (Type: {doc.metadata.get('type')}, Page: {doc.metadata.get('page_num')}):")
-            print(f"  Content: {doc.page_content[:150]}...") # Print first 150 chars of content
-            print(f"  Metadata: {doc.metadata}\n")
-    else:
-        print("Could not load ChromaDB for demonstration.")
+    #     print("\n--- Retrieved Documents ---")
+    #     for i, doc in enumerate(retrieved_docs):
+    #         print(f"Document {i+1} (Type: {doc.metadata.get('type')}, Page: {doc.metadata.get('page_num')}):")
+    #         print(f"  Content: {doc.page_content[:150]}...") # Print first 150 chars of content
+    #         print(f"  Metadata: {doc.metadata}\n")
+    # else:
+    #     print("Could not load ChromaDB for demonstration.")
 
     print(f"\nOverall process complete! Check the '{output_embedding_directory}' directory for results.")
     print("Each PDF will have its own subfolder containing extracted content (text, tables, images),")
     print("a JSON file with structured data and embeddings, and a 'chroma_db' folder.")
-    return retriever
-
-# Sample documents for our knowledge base
-# In a real application, these would come from files, databases, etc.
-raw_documents = [
-    "The capital of France is Paris. Paris is known for the Eiffel Tower.",
-    "The Amazon rainforest is the largest rainforest in the world.",
-    "Python is a popular programming language for AI and web development.",
-    "The highest mountain in the world is Mount Everest, located in the Himalayas.",
-    "Artificial intelligence (AI) is a rapidly developing field.",
-    "The primary colors are red, yellow, and blue.",
-    "Water's chemical formula is H2O.",
-    "The Earth revolves around the Sun."
-]
+    
