@@ -44,7 +44,7 @@ def get_text_embedding(text_content: str) -> List[float]:
     except Exception as e:
         print(f"    - Error generating text embedding: {e}")
         return []
-
+#
 def get_table_embedding(df: pd.DataFrame) -> Dict[str, Any]:
     """
     Converts a DataFrame to a Markdown table string, generates a description,

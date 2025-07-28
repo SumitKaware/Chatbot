@@ -9,7 +9,7 @@ import operator
 from model import llm, embeddings  # Importing the LLM and embeddings from model.py
 from pdfloader import vector_db
 from storing_embeddings import load_chroma_db_and_retriever  # Importing raw documents from pdfloader.py
-
+#
 # Create a vector database
 #vector_db()  # Initialize the vector store with a sample query
 

@@ -358,4 +358,4 @@ def vector_db():
     print(f"\nOverall process complete! Check the '{output_embedding_directory}' directory for results.")
     print("Each PDF will have its own subfolder containing extracted content (text, tables, images),")
     print("a JSON file with structured data and embeddings, and a 'chroma_db' folder.")
-    
+    #

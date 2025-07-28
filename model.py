@@ -9,7 +9,7 @@ from langchain_community.vectorstores import Chroma # Import ChromaDB
 load_dotenv()
 
 # --- 1. Configuration and Setup ---
-
+#
 # IMPORTANT: Replace "YOUR_API_KEY" with your actual Google API Key or set it as an environment variable.
 # You can get an API key from Google AI Studio: https://aistudio.google.com/app/apikey
 # It's recommended to set it as an environment variable: export GOOGLE_API_KEY="your_api_key_here"

@@ -3,7 +3,7 @@ from langchain_core.documents import Document as LangchainDocument # Alias to av
 from typing import List, Dict, Any
 from langchain_community.vectorstores import Chroma # Import ChromaDB
 from model import embeddings, vector_db_setup
-
+#
 def store_embeddings_in_chromadb(processed_data_by_pdf: Dict[str, List[Dict[str, Any]]], output_dir: str):
     """
     Stores the extracted and embedded content from multiple PDFs into ChromaDB.
