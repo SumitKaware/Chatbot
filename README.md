@@ -2,9 +2,9 @@
 
 ![ChatbotFD](https://github.com/user-attachments/assets/5659891b-33be-4478-9693-c4bcd2cf05c2)
 
-Step-by-step description of the system's operation:
+## Step-by-step description of the system's operation:
 
-Phase 1: Document Ingestion and Indexing
+### Phase 1: Document Ingestion and Indexing
 
 1. Data Storage: Raw data, including documents, is stored in a Data Storage system.
 
@@ -20,7 +20,7 @@ Phase 1: Document Ingestion and Indexing
 
 4. Vector DB: The generated embeddings, along with associated metadata and original content, are stored in a Vector DB (Vector Database). This database allows for efficient similarity searches based on the embeddings.
 
-Phase 2: Query Processing and Response Generation (Retrieval-Augmented Generation - RAG)
+### Phase 2: Query Processing and Response Generation (Retrieval-Augmented Generation - RAG)
 
 1. Client: A user interacts with the system through a Client application, typically by submitting a query or question.
 
